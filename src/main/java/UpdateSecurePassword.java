@@ -1,7 +1,4 @@
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.ResultSet;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.ArrayList;
 
 import org.jasypt.util.password.PasswordEncryptor;
@@ -28,10 +25,20 @@ public class UpdateSecurePassword {
 
         Class.forName("com.mysql.jdbc.Driver").newInstance();
         Connection connection = DriverManager.getConnection(loginUrl, loginUser, loginPasswd);
-        Statement statement = connection.createStatement();
+        CallableStatement cs = connection.prepareCall("CALL backup_customers()");
+        cs.executeUpdate();
+        if( cs.executeUpdate() == 0){
+            cs.close();
+            connection.close();
+            System.out.println("The table backup exists. This probably means the table is already encrypted");
+            return;
+        }
+        //maybe grab the count?
+        cs.close();
 
         // change the customers table password column from VARCHAR(20) to VARCHAR(128)
         String alterQuery = "ALTER TABLE customers MODIFY COLUMN password VARCHAR(128)";
+        connection.prepareStatement(alterQuery);
         int alterResult = statement.executeUpdate(alterQuery);
         System.out.println("altering customers table schema completed, " + alterResult + " rows affected");
 
